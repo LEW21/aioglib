@@ -1,0 +1,6 @@
+- aio API - works on asyncio and trio:
+  - gbulb.GLibEventLoop = perfect
+  - others require GLib in the worker thread (without gbulb)
+- sync API (implemented on top of AioGLib/asyncio/gbulb):
+  - blocking internally runs gbulb.GLibEventLoop
+  - others require AioGLib/asyncio/gbulb in the worker thread
