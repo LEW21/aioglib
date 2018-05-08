@@ -549,18 +549,6 @@ def _get_field(cls, a_name, a_type):
     f.name = a_name
     f.type = a_type
 
-    # If typing has not been imported, then it's impossible for
-    #  any annotation to be a ClassVar. So, only look for ClassVar
-    #  if typing has been imported.
-    typing = sys.modules.get('typing')
-    if typing is not None:
-        # This test uses a typing internal class, but it's the best
-        #  way to test if this is a ClassVar.
-        if (type(a_type) is typing._GenericAlias and
-                a_type.__origin__ is typing.ClassVar):
-            # This field is a ClassVar, so it's not a field.
-            f._field_type = _FIELD_CLASSVAR
-
     if f._field_type is _FIELD:
         # Check if this is an InitVar.
         if a_type is InitVar:
