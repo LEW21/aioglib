@@ -1,37 +1,72 @@
-from gi.repository import Gio
-from functools import partial
-
 import asyncio
 
-from ..util import get_main_context, set_future_from
+
+Event = asyncio.Event
+sleep = asyncio.sleep
 
 
-def is_active():
-	try:
-		return asyncio.get_event_loop().is_running()
-	except RuntimeError:
-		return False
+class AioToken:
+	def __init__(self, loop):
+		self.loop = loop
+
+	def run_sync_soon(self, sync_fn, *args):
+		self.loop.call_soon_threadsafe(sync_fn, *args)
 
 
-class GLibTask(asyncio.Future):
-	def __init__(self, op):
-		super().__init__()
-		self._gio_cancellable = Gio.Cancellable.new()
-		op(self)
-
-	def cancel(self):
-		if self.done():
-			return False
-		self._gio_cancellable.cancel()
-		return True
+def current_aio_token():
+	loop = asyncio.get_event_loop()
+	if not loop.is_running():
+		raise RuntimeError('No active event loop.')
+	return AioToken(loop)
 
 
-def call(start, finish, *args):
-	def op(res):
-		cancellable = res._gio_cancellable
-		set_res_from = partial(asyncio.get_event_loop().call_soon_threadsafe, set_future_from, res)
-		def start_fn():
-			start(*([arg for arg in args] + [cancellable, (lambda _, cbres: set_res_from(lambda: finish(cbres)))]))
-		get_main_context().invoke_full(0, start_fn)
+class Future:
+	def __init__(self):
+		self.event = Event()
 
-	return GLibTask(op)
+	def set(self, outcome):
+		self.outcome = outcome
+		self.event.set()
+
+	async def wait(self):
+		await self.event.wait()
+		return self.outcome.unwrap()
+
+	def __await__(self):
+		return self.wait().__await__()
+
+
+class UnboundedQueue(asyncio.Queue):
+	def __aiter__(self):
+		return self
+
+	async def __anext__(self):
+		return [await self.get()]
+
+
+class TaskStatus(asyncio.Future):
+	def started(self, value=None):
+		self.set_result(value)
+
+
+class Nursery:
+	def start(self, async_fn, *args):
+		ts = TaskStatus()
+		self.children.append(self.loop.create_task(async_fn(*args, task_status=ts)))
+		return ts
+
+	def start_soon(self, async_fn, *args):
+		self.children.append(self.loop.create_task(async_fn(*args)))
+
+	async def __aenter__(self):
+		self.loop = asyncio.get_event_loop()
+		self.children = []
+		return self
+
+	async def __aexit__(self, exc_type, exc, tb):
+		for child in self.children:
+			await child
+
+
+def open_nursery():
+	return Nursery()

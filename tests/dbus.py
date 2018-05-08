@@ -60,24 +60,75 @@ elif mode == Mode.sync_gevent_nomonkey_worker:
 
 
 from aioglib.dbus import bus_get, BusType, MAXINT, Variant, VariantType
+from aioglib.aio import sleep, open_nursery
+from gi.repository import Gio
+
+
+xml = """
+<node>
+	<interface name='net.lew21.aioglib.Test'>
+		<method name='HelloWorld'>
+			<arg type='s' name='response' direction='out'/>
+		</method>
+		<method name='Quit'/>
+	</interface>
+</node>
+"""
+
+
+async def serve(listener):
+	async for call in listener:
+		assert call.interface_name == 'net.lew21.aioglib.Test'
+		if call.method_name == 'HelloWorld':
+			call.invocation.return_value(Variant('(s)', ("Hello world!",)))
+		elif call.method_name == 'Quit':
+			call.invocation.return_value(None)
+			await sleep(1)
+			return
+		else:
+			print(call)
+
 
 async def main():
 	bus = await bus_get(BusType.SESSION)
-	assert((await bus.call(
-		'org.freedesktop.Notifications',
-		'/org/freedesktop/Notifications',
-		'org.freedesktop.Notifications',
-		'Notify',
-		Variant('(susssasa{sv}i)', ('aioglib', 123, 'aioglib', 'Something happened', 'Lorem ipsum dolor sit amet', [], {}, 2000)),
-		VariantType('(u)'),
-		0,
-		MAXINT
-	)).unpack() == (123,))
 
+	async with open_nursery() as nursery:
+		iface = Gio.DBusNodeInfo.new_for_xml(xml).interfaces[0]
+		async with bus.register_object('/', iface) as listener:
+			nursery.start_soon(serve, listener)
 
-async def dummy():
-	return 5
+			assert (await bus.call(
+				'org.freedesktop.DBus',
+				'/org/freedesktop/DBus',
+				'org.freedesktop.DBus',
+				'RequestName',
+				Variant('(su)', ('net.lew21.aioglib.Test', 4)),
+				VariantType('(u)'),
+				0,
+				MAXINT
+			)).unpack() == (1,)
 
-assert(sync_await(dummy) == 5)
+			assert (await bus.call(
+				'net.lew21.aioglib.Test',
+				'/',
+				'net.lew21.aioglib.Test',
+				'HelloWorld',
+				Variant('()', ()),
+				VariantType('(s)'),
+				0,
+				MAXINT
+			)).unpack() == ('Hello world!',)
+
+			assert (await bus.call(
+				'net.lew21.aioglib.Test',
+				'/',
+				'net.lew21.aioglib.Test',
+				'Quit',
+				Variant('()', ()),
+				VariantType('()'),
+				0,
+				MAXINT
+			)).unpack() == ()
+
 
 sync_await(main)

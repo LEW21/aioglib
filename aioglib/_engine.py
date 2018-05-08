@@ -1,20 +1,22 @@
-from .aio import call
+from .aio import run, watch
 
 
-class AsyncFunction:
+class Runner:
 	def __init__(self, start, finish):
 		self.start = start
 		self.finish = finish
 
 	def __call__(self, *args):
-		return call(self.start, self.finish, *args)
+		return run(self.start, self.finish, *args)
 
 
-def make_callback(func):
-	if func is None:
-		return None
+class Watcher:
+	def __init__(self, install, uninstall):
+		self.install = install
+		self.uninstall = uninstall
 
-	return partial(get_event_loop().call_soon_threadsafe, func)
+	def __call__(self, *args):
+		return watch(self.install, self.uninstall, *args)
 
 
 def AioProperty(cls):
