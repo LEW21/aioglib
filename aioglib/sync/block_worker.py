@@ -1,8 +1,8 @@
 from asyncio import Future, get_event_loop, run_coroutine_threadsafe
 from functools import partial
 
-from ..util import set_future_from
 from . import worker
+from .util import set_future_from
 
 
 def sync_await(coro):

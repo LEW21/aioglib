@@ -1,12 +1,14 @@
+from gbulb import GLibEventLoop
 from gi.repository import GLib
+
 try:
 	# We need a real thread, even if gevent has monkeypatched threads.
 	from gevent.threadpool import ThreadPoolExecutor
 except ImportError:
 	from concurrent.futures import ThreadPoolExecutor
 
-from gbulb import GLibEventLoop
-from ..util import push_main_context, push_event_loop, get_main_context
+from .util import push_event_loop
+from .._context import push_main_context
 
 
 loop = None

@@ -1,6 +1,7 @@
 from gbulb import GLibEventLoop
 
-from ..util import push_main_context, push_event_loop
+from .._context import push_main_context
+from .util import push_event_loop
 
 
 def sync_await(coro):

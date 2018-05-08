@@ -3,8 +3,8 @@ from functools import partial
 from gevent.event import AsyncResult
 from gevent.threadpool import ThreadResult
 
-from ..util import set_future_from
 from . import worker
+from .util import set_future_from
 
 
 class GFuture(AsyncResult):

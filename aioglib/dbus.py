@@ -1,6 +1,8 @@
 from ._py37.dataclasses import dataclass
 from gi.repository import GLib, Gio
-from ._engine import AioProperty, Runner, Watcher
+
+from ._core import AioProperty, Runner, Watcher
+
 
 BusType = Gio.BusType
 MAXINT = GLib.MAXINT

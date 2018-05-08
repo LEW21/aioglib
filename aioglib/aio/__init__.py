@@ -1,10 +1,11 @@
+from .._py37.contextlib import asynccontextmanager
 from functools import partial
 from gi.repository import Gio
 from outcome import capture
 
-from .._py37.contextlib import asynccontextmanager
-from ..util import get_main_context
+from .._context import get_main_context
 from .worker import launch as launch_worker
+
 
 __all__ = ['sleep', 'open_nursery', 'launch_worker', 'run', 'watch']
 
